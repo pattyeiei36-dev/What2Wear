@@ -9,34 +9,31 @@ st.title("👗 Daily Outfit Randomizer")
 st.write("ช่วยสุ่มชุดประจำวันหรือเลือก outfit สำหรับแต่งตัวไปงานต่างๆ")
 
 # ==================== 1. โหลดรูปภาพตั้งต้นจากโฟลเดอร์ ====================
-# หากมีรูปอยู่ในโฟลเดอร์เดียวกับ app.py สามารถใช้ Image.open("ชื่อไฟล์.jpg") ได้
-# ถ้าหาไฟล์ไม่พบ ระบบจะใส่เป็น None ให้อัตโนมัติ (ไม่ทำให้โค้ดค้าง/พัง)
+# ใช้ load_default_image เพื่อป้องกันแอปเด้งดับเวลาหาไฟล์ไม่เจอ
 def load_default_image(file_name):
     try:
         return Image.open(file_name)
     except Exception:
         return None
 
-# ตัวอย่างการโหลดรูปตั้งต้น (เปลี่ยน "sample1.jpg" เป็นชื่อไฟล์รูปที่มีในเครื่องได้เลย)
-img_sample1 = load_default_image("sample1.jpg")
-img_sample2 = load_default_image("sample2.jpg")
-
 # ==================== 2. INITIALIZE SESSION STATE ====================
 if "outfits" not in st.session_state:
     st.session_state.outfits = {
         "ไปเรียน / ทำงาน": [
-            {"text": "เสื้อเชิ้ตสีขาว + กางเกงสแล็คสีดำ + รองเท้าผ้าใบ", "image": Image.open(r"C:\Users\ADMIN\Downloads\Gemini_Generated_Image_kro3m6kro3m6kro3.jpg")},
-            {"text": "เสื้อโปโลสีน้ำเงิน + กางเกงชิโน่สีน้ำตาล + รองเท้าผ้าใบ", "image": Image.open(r"C:\Users\ADMIN\Downloads\Gemini_Generated_Image_kisu8zkisu8zkisu.jpg")},
-            {"text": "เสื้อเบลเซอร์ + เสื้อยืดข้างใน + กางเกงยีนส์ทรงกระบอก", "image": Image.open(r"C:\Users\ADMIN\Downloads\ชุด3.jpg")},
+            {"text": "เสื้อเชิ้ตสีขาว + กางเกงสแล็คสีดำ + รองเท้าผ้าใบ", "image": load_default_image(r"C:\Users\ADMIN\Downloads\Gemini_Generated_Image_kro3m6kro3m6kro3.jpg")},
+            {"text": "เสื้อโปโลสีน้ำเงิน + กางเกงชิโน่สีน้ำตาล + รองเท้าผ้าใบ", "image": load_default_image(r"C:\Users\ADMIN\Downloads\Gemini_Generated_Image_kisu8zkisu8zkisu.jpg")},
+            {"text": "เสื้อเบลเซอร์ + เสื้อยืดข้างใน + กางเกงยีนส์ทรงกระบอก", "image": load_default_image(r"C:\Users\ADMIN\Downloads\ชุด3.jpg")},
         ],
         "ไปเที่ยวชิลๆ": [
-            {"text": "เสื้อยืด Oversize + กางเกงขาสั้น + รองเท้าแตะแฟชั่น", "image": Image.open(r"C:\Users\ADMIN\Downloads\Gemini_Generated_Image_eo43h1eo43h1eo43.jpg")},
+            {"text": "เสื้อยืด Oversize + กางเกงขาสั้น + รองเท้าแตะแฟชั่น", "image": load_default_image(r"C:\Users\ADMIN\Downloads\Gemini_Generated_Image_eo43h1eo43h1eo43.jpg")},
             {"text": "เสื้อสายเดี่ยว/เสื้อกล้าม + กางเกงยีนส์เอวสูง + รองเท้าผ้าใบ", "image": load_default_image("Gemini_Generated_Image_1a4aex1a4aex1a4a.jpg")},
-
+            {"text": "ชุดเดรสลายดอกไม้ + หมวกสาน + รองเท้าคัทชูแบบสวม", "image": load_default_image("Gemini_Generated_Image_1a4aex1a4aex1a4a.jpg")},
+        ],
         "ไปงานแต่ง / งานทางการ": [
             {"text": "ชุดสูทสากลสีเทา/กรมท่า + เนกไท + รองเท้าหนัง", "image": None},
-            {"text": "ชุดเดรสยาวออกงาน + เครื่องประดับเรียบหรู + รองเท้าส้นสูง", "image": None},
-            {"text": "ชุดไทยจิตรลดา / ชุดประยุกต์สุภาพ", "image": None}
+            {"text": "ชุดเดรสยาวออกงาน + เครื่องประดับเรียบหรู + รองเท้าส้นสูง", "image": None},  # เติม , ปิดท้าย
+            {"text": "ชุดประยุกต์สุภาพ", "image": None},  # เติม , ปิดท้าย
+            {"text": "ชุดยาวสีขาว รองเท้าคัทชูสีขาว", "image": None}
         ]
     }
 
@@ -64,7 +61,7 @@ if st.sidebar.button("💾 บันทึกชุดใหม่", use_contain
             img_data = Image.open(uploaded_file)
         
         # เพิ่มข้อมูลชุดใหม่ลง Session State
-        st.session_state.outfits[selected_cat_to_add].append({{
+        st.session_state.outfits[selected_cat_to_add].append({
             "text": new_outfit_text.strip(),
             "image": img_data
         })
