@@ -1,13 +1,120 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import random
 import os
 
 # --- CONFIG & INITIAL SETUP ---
 st.set_page_config(page_title="Modern Outfit Picker", page_icon="🛍️", layout="centered")
 
+# --- 1. CSS ธีมสีชมพูสดใส & ตกแต่งปุ่ม/การ์ด ---
+st.markdown("""
+<style>
+    /* พื้นหลังแอปสีชมพูสดใส */
+    .stApp {
+        background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FFA7A7 100%) !important;
+    }
+    
+    /* ตกแต่งหัวข้อหลัก */
+    h1 {
+        color: #FF1493 !important;
+        font-weight: 900 !important;
+        text-shadow: 2px 2px 8px rgba(255, 255, 255, 0.8);
+        text-align: center;
+    }
+    
+    /* การ์ดผลลัพธ์ */
+    .outfit-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        padding: 25px;
+        box-shadow: 0 12px 30px rgba(255, 20, 147, 0.25);
+        border: 3px solid #FF69B4;
+        margin-top: 20px;
+        margin-bottom: 25px;
+    }
+
+    /* ปุ่มสุ่มสีชมพูกราเดียนต์ */
+    div.stButton > button[kind="primary"] {
+        background: linear-gradient(45deg, #FF007F, #FF758C, #FF7EB3) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 30px !important;
+        padding: 14px 35px !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
+        box-shadow: 0 6px 20px rgba(255, 0, 127, 0.4) !important;
+        width: 100%;
+        transition: all 0.3s ease !important;
+    }
+    div.stButton > button[kind="primary"]:hover {
+        transform: scale(1.03) !important;
+        box-shadow: 0 8px 25px rgba(255, 0, 127, 0.6) !important;
+    }
+
+    /* CSS สำหรับไอคอนเสื้อผ้าร่วงหล่น */
+    .falling-icon {
+        position: fixed;
+        top: -10%;
+        z-index: 999999;
+        user-select: none;
+        pointer-events: none;
+        animation-name: fallAnimation;
+        animation-timing-function: linear;
+        animation-iteration-count: infinite;
+    }
+
+    @keyframes fallAnimation {
+        0% {
+            top: -10%;
+            transform: translateX(0) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            top: 105vh;
+            transform: translateX(100px) rotate(360deg);
+            opacity: 0.2;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- 2. JAVASCRIPT ยิงไอคอนร่วงหล่นเข้าหน้าหลักโดยตรง ---
+components.html("""
+<script>
+    const parentDoc = window.top.document;
+    const icons = ['👕', '👗', '👟', '🧢', '🕶️', '👜', '🧥', '👖', '🎀', '👚', '👠', '🛍️', '✨'];
+
+    function createFallingIcon() {
+        if (!parentDoc.body) return;
+
+        const iconElement = parentDoc.createElement('div');
+        iconElement.className = 'falling-icon';
+        iconElement.innerText = icons[Math.floor(Math.random() * icons.length)];
+        
+        // สุ่มตำแหน่ง ขนาด และความเร็วในการตก
+        iconElement.style.left = Math.random() * 95 + 'vw';
+        iconElement.style.fontSize = (Math.random() * 20 + 20) + 'px';
+        iconElement.style.animationDuration = (Math.random() * 3 + 4) + 's';
+        iconElement.style.opacity = Math.random() * 0.8 + 0.3;
+
+        parentDoc.body.appendChild(iconElement);
+
+        // ลบ Element ทิ้งเมื่อร่วงจบจอ
+        setTimeout(() => {
+            iconElement.remove();
+        }, 7000);
+    }
+
+    // สร้างไอคอนใหม่ทุกๆ 350 มิลลิวินาที
+    if (!window.top.iconInterval) {
+        window.top.iconInterval = setInterval(createFallingIcon, 350);
+    }
+</script>
+""", height=0)
+
 USER_DB = {"user1": "1234", "admin": "password"}
 
-# คลังชุดแต่งกายสไตล์วัยรุ่นยุคใหม่ (อัปเดตใช้ Local Image Path)
+# คลังชุดแต่งกายสไตล์วัยรุ่นยุคใหม่
 MODERN_OUTFITS = [
     # --- 🧢 Gorpcore & Techwear ---
     {
@@ -62,6 +169,18 @@ MODERN_OUTFITS = [
         "desc": "เสื้อบอลวินเทจยุค 90s + กางเกงยีนส์บากี้หลวมๆ + รองเท้า Adidas Samba / Gazelle",
         "img": r"Gemini_Generated_Image_4i1y554i1y554i1y.jpg"
     },
+    {
+        "category": "⚽ Blokecore & Sporty",
+        "name": "Sporty Track Crop Fit",
+        "desc": "เสื้อโปโลครอปเอวลอยทรงสปอร์ตสกรีนเบอร์/โลโก้ + กางเกงวอร์มวิดเทจผ้าร่มทรงขากว้างกองพื้น (Track Pants) + รองเท้าสนีกเกอร์พื้นหนา (Chunky Sneakers) + หมวกเบสบอลปักลาย",
+        "img": r"Gemini_Generated_Image_pk8leepk8leepk8l.jpg"
+    },
+    {
+        "category": "⚽ Blokecore & Sporty",
+        "name": "Retro Jersey & Cargo",
+        "desc": "เสื้อกล้ามครอปผ้าร่องสีขาว สวมทับด้วยเสื้อเชิ้ตบอลวินเทจแขนสั้นทรง Oversized (ติดกระดุมเม็ดบนเม็ดเดียว) + กางเกงยีนส์เอวต่ำทรงคาร์โก้ขากว้างกองพื้นสีเทาฟอก + รองเท้าสนีกเกอร์สไตล์เรโทร + หมวกไหมพรม (Beanie) สีเข้ม",
+        "img": r"Gemini_Generated_Image_ngxsarngxsarngxs.jpg"
+    },
 
     # --- 🖤 Acubi & Modern Y2K ---
     {
@@ -70,11 +189,17 @@ MODERN_OUTFITS = [
         "desc": "เสื้อซีทรูแขนยาวทับสายเดี่ยวแบบเฉียง + กางเกงคาร์โก้เอวต่ำสีเทา/ดำ + สร้อยคอเงินแท่งมินิมอล",
         "img": r"Gemini_Generated_Image_tg0of9tg0of9tg0o.jpg"
     },
+    {
+        "category": "🖤 Acubi & Modern Y2K",
+        "name": "Metallic Y2K Knit Fit",
+        "desc": "เสื้อไหมพรมถักโปร่งตัวสั้นโทนสีดำ/เทาฟอก สวมทับเสื้อสายเดี่ยวครอปสีขาว + กางเกงยีนส์เอวต่ำทรงขากว้างฟอกซีดกองพื้น + เข็มขัดหัวโลหะรูปดาว + รองเท้าสนีกเกอร์พื้นหนาโทนสีเงินเมทัลลิก",
+        "img": r"Gemini_Generated_Image_l0qhrwl0qhrwl0qh.jpg"
+    },
 
     # --- ☕ Korean Cityboy & Minimal ---
     {
         "category": "☕ Korean Cityboy & Minimal",
-        "name": "ลุคไปคาเฟ่ชิลๆ",
+        "name": "Cafe Chills Cityboy",
         "desc": "เสื้อเชิ้ต Oxford ทรงหลวมพิเศษ + กางเกงยีนส์ทรงขากระบอกใหญ่ + รองเท้า Clark Wallabee",
         "img": r"Gemini_Generated_Image_9n8oei9n8oei9n8o.jpg"
     },
@@ -153,7 +278,7 @@ else:
 
 # --- MAIN APP DISPLAY ---
 st.title("🛍️ Trend & Aesthetic Outfit Picker")
-st.write("สุ่มไอเดียจัดเซ็ตเสื้อผ้าสำหรับเทรนด์วัยรุ่นยุคใหม่")
+st.markdown("<p style='text-align: center; color: #4A4A4A; font-weight: 600;'>💖 สุ่มไอเดียจัดเซ็ตเสื้อผ้าสำหรับเทรนด์วัยรุ่นยุคใหม่</p>", unsafe_allow_html=True)
 
 categories_list = ["สุ่มจากทุกหมวดหมู่ (All Categories)"] + sorted(list(set([o["category"] for o in st.session_state.outfits])))
 selected_cat = st.selectbox("🎯 เลือกสไตล์ที่ชอบ:", categories_list)
@@ -171,17 +296,21 @@ if st.button("✨ สุ่มลุคแต่งตัว!", type="primary"):
 if "current_outfit" in st.session_state:
     outfit = st.session_state.current_outfit
     
-    st.markdown("---")
-    st.caption(f"หมวดหมู่: {outfit['category']}")
-    st.subheader(f"⚡ ลุคแนะนำ: **{outfit['name']}**")
-    st.write(f"🧺 **ชิ้นส่วนในเซ็ต:** {outfit['desc']}")
+    st.markdown(f"""
+    <div class="outfit-card">
+        <span style="background: linear-gradient(45deg, #FF007F, #FF69B4); color: white; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;">
+            {outfit['category']}
+        </span>
+        <h2 style="color: #FF1493; margin-top: 15px; margin-bottom: 8px;">⚡ ลุคแนะนำ: <b>{outfit['name']}</b></h2>
+        <p style="color: #333333; font-size: 16px; line-height: 1.6;">🧺 <b>ชิ้นส่วนในเซ็ต:</b> {outfit['desc']}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # เช็กว่ารูปภาพมาจาก URL หรือ Local File Path ในเครื่อง
     img_path = outfit['img']
     if img_path.startswith("http://") or img_path.startswith("https://"):
         st.image(img_path, caption=f"Outfit Visual: {outfit['name']}", use_container_width=True)
     else:
-        # ตรวจสอบว่ามีไฟล์อยู่จริงในเครื่องก่อนแสดงผล
         if os.path.exists(img_path):
             st.image(img_path, caption=f"Outfit Visual: {outfit['name']}", use_container_width=True)
         else:
