@@ -5,7 +5,7 @@ import os
 # --- CONFIG & INITIAL SETUP ---
 st.set_page_config(page_title="Modern Outfit Picker", page_icon="🛍️", layout="centered")
 
-# --- 1. CSS ธีมสีชมพู & เอฟเฟกต์ไอคอนร่วงหล่นภายในหน้าเว็บ ---
+# --- 1. CSS ธีมสีชมพูสดใส & เอฟเฟกต์ไอคอนร่วงหล่น ---
 st.markdown("""
 <style>
     /* พื้นหลังแอปสีชมพูสดใส */
@@ -51,7 +51,7 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(255, 0, 127, 0.6) !important;
     }
 
-    /* สร้างกล่องจำลองฝนเสื้อผ้าร่วงหล่นแบบเสถียรบน Cloud */
+    /* กล่องเอฟเฟกต์ไอคอนเสื้อผ้าร่วงหล่น */
     .rain-container {
         position: fixed;
         top: 0;
@@ -84,7 +84,7 @@ st.markdown("""
     }
 </style>
 
-<!-- สร้างสลัดไอคอนร่วงหล่นด้วย CSS Pure Animation เพื่อให้รันบน Cloud ได้ชัวร์ -->
+<!-- ไอคอนร่วงหล่นบนหน้าจอ -->
 <div class="rain-container">
     <div class="falling-item" style="left: 5%; font-size: 24px; animation-duration: 5s; animation-delay: 0s;">👕</div>
     <div class="falling-item" style="left: 15%; font-size: 28px; animation-duration: 7s; animation-delay: 2s;">👗</div>
@@ -99,11 +99,17 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-USER_DB = {"user1": "1234", "admin": "password"}
+# --- USER DATABASE & STATE SETUP ---
+if "user_db" not in st.session_state:
+    st.session_state.user_db = {"user1": "1234", "admin": "password"}
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
 
 # คลังชุดแต่งกายสไตล์วัยรุ่นยุคใหม่
 MODERN_OUTFITS = [
-    # --- 🧢 Gorpcore & Techwear ---
     {
         "category": "🧢 Gorpcore & Techwear",
         "name": "Gorpcore Utility Trail",
@@ -134,8 +140,6 @@ MODERN_OUTFITS = [
         "desc": "เสื้อกั๊กผ้านวม (Puffer Vest) + เสื้อฮู้ดดี้คอตตอนหนา + กางเกงยีนส์ฟอก + บูทลุยหิมะ/ป่า",
         "img": r"Gemini_Generated_Image_q81jtiq81jtiq81j.jpg"
     },
-
-    # --- ✨ Clean Girl & Old Money ---
     {
         "category": "✨ Clean Girl & Old Money",
         "name": "Quiet Luxury Linen",
@@ -148,8 +152,6 @@ MODERN_OUTFITS = [
         "desc": "เสื้อไหมพรมคอวีถักลายเคเบิล + กระโปรงเทนนิสอัดจีบ + ถุงเท้าข้อยาวสีขาว + รองเท้าผ้าใบคลีนๆ",
         "img": r"Gemini_Generated_Image_lrueellrueellrue.jpg"
     },
-
-    # --- ⚽ Blokecore & Sporty ---
     {
         "category": "⚽ Blokecore & Sporty",
         "name": "Vintage Football Blokecore",
@@ -168,8 +170,6 @@ MODERN_OUTFITS = [
         "desc": "เสื้อกล้ามครอปผ้าร่องสีขาว สวมทับด้วยเสื้อเชิ้ตบอลวินเทจแขนสั้นทรง Oversized (ติดกระดุมเม็ดบนเม็ดเดียว) + กางเกงยีนส์เอวต่ำทรงคาร์โก้ขากว้างกองพื้นสีเทาฟอก + รองเท้าสนีกเกอร์สไตล์เรโทร + หมวกไหมพรม (Beanie) สีเข้ม",
         "img": r"Gemini_Generated_Image_ngxsarngxsarngxs.jpg"
     },
-
-    # --- 🖤 Acubi & Modern Y2K ---
     {
         "category": "🖤 Acubi & Modern Y2K",
         "name": "Acubi Minimal Layering",
@@ -182,8 +182,6 @@ MODERN_OUTFITS = [
         "desc": "เสื้อไหมพรมถักโปร่งตัวสั้นโทนสีดำ/เทาฟอก สวมทับเสื้อสายเดี่ยวครอปสีขาว + กางเกงยีนส์เอวต่ำทรงขากว้างฟอกซีดกองพื้น + เข็มขัดหัวโลหะรูปดาว + รองเท้าสนีกเกอร์พื้นหนาโทนสีเงินเมทัลลิก",
         "img": r"Gemini_Generated_Image_l0qhrwl0qhrwl0qh.jpg"
     },
-
-    # --- ☕ Korean Cityboy & Minimal ---
     {
         "category": "☕ Korean Cityboy & Minimal",
         "name": "Cafe Chills Cityboy",
@@ -204,28 +202,42 @@ MODERN_OUTFITS = [
     }
 ]
 
-# โหลดชุดลงใน Session State
 if "outfits" not in st.session_state:
     st.session_state.outfits = MODERN_OUTFITS
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-
-# --- LOGIN & LOGOUT SYSTEM ---
-def login():
-    st.sidebar.title("🔐 เข้าสู่ระบบ")
-    user_input = st.sidebar.text_input("Username")
-    pass_input = st.sidebar.text_input("Password", type="password")
+# --- AUTH SYSTEM (LOGIN / SIGN UP / LOGOUT) ---
+def auth_system():
+    st.sidebar.title("🔐 ระบบบัญชีผู้ใช้")
+    choice = st.sidebar.radio("เลือกทำรายการ", ["เข้าสู่ระบบ (Login)", "สมัครสมาชิก (Sign Up)"])
     
-    if st.sidebar.button("Login"):
-        if user_input in USER_DB and USER_DB[user_input] == pass_input:
-            st.session_state.logged_in = True
-            st.session_state.username = user_input
-            st.rerun()
-        else:
-            st.sidebar.error("Username หรือ Password ไม่ถูกต้อง")
+    if choice == "เข้าสู่ระบบ (Login)":
+        st.sidebar.subheader("เข้าสู่ระบบ")
+        user_input = st.sidebar.text_input("Username")
+        pass_input = st.sidebar.text_input("Password", type="password")
+        
+        if st.sidebar.button("Login"):
+            if user_input in st.session_state.user_db and st.session_state.user_db[user_input] == pass_input:
+                st.session_state.logged_in = True
+                st.session_state.username = user_input
+                st.sidebar.success("เข้าสู่ระบบสำเร็จ!")
+                st.rerun()
+            else:
+                st.sidebar.error("Username หรือ Password ไม่ถูกต้อง")
+                
+    else:
+        st.sidebar.subheader("สมัครสมาชิกใหม่")
+        new_user = st.sidebar.text_input("สร้าง Username ใหม่")
+        new_pass = st.sidebar.text_input("สร้าง Password ใหม่", type="password")
+        
+        if st.sidebar.button("Register & Sign Up"):
+            if new_user and new_pass:
+                if new_user in st.session_state.user_db:
+                    st.sidebar.warning("Username นี้ถูกใช้งานแล้ว กรุณาใช้ชื่ออื่น")
+                else:
+                    st.session_state.user_db[new_user] = new_pass
+                    st.sidebar.success("สมัครสมาชิกสำเร็จ! สามารถเข้าสู่ระบบได้เลย")
+            else:
+                st.sidebar.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
 
 def logout():
     st.session_state.logged_in = False
@@ -234,10 +246,10 @@ def logout():
 
 # --- SIDEBAR CONTROLS ---
 if not st.session_state.logged_in:
-    login()
+    auth_system()
 else:
     st.sidebar.write(f"👤 ยินดีต้อนรับ, **{st.session_state.username}**")
-    if st.sidebar.button("Logout"):
+    if st.sidebar.button("ออกจากระบบ (Logout)"):
         logout()
     
     st.sidebar.divider()
