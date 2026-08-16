@@ -14,7 +14,6 @@ MODERN_OUTFITS = [
         "category": "🧢 Gorpcore & Techwear",
         "name": "Gorpcore Utility Trail",
         "desc": "เสื้อแจ็กเก็ตกันลม Arc'teryx + กางเกงคาร์โก้ผ้า Ripstop + รองเท้า Salomon XT-6 + แว่น Oakley",
-        # ใช้ r"..." เพื่อรองรับ Path บน Windows (ใส่ตัว r ด้านหน้า)
         "img": r"Gemini_Generated_Image_yk5vbwyk5vbwyk5v.jpg"
     },
     {
@@ -69,15 +68,27 @@ MODERN_OUTFITS = [
         "category": "🖤 Acubi & Modern Y2K",
         "name": "Acubi Minimal Layering",
         "desc": "เสื้อซีทรูแขนยาวทับสายเดี่ยวแบบเฉียง + กางเกงคาร์โก้เอวต่ำสีเทา/ดำ + สร้อยคอเงินแท่งมินิมอล",
-        "img": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600"
+        "img": r"Gemini_Generated_Image_tg0of9tg0of9tg0o.jpg"
     },
 
     # --- ☕ Korean Cityboy & Minimal ---
     {
         "category": "☕ Korean Cityboy & Minimal",
-        "name": "Cityboy Wide Silhouette",
+        "name": "ลุคไปคาเฟ่ชิลๆ",
         "desc": "เสื้อเชิ้ต Oxford ทรงหลวมพิเศษ + กางเกงยีนส์ทรงขากระบอกใหญ่ + รองเท้า Clark Wallabee",
-        "img": "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600"
+        "img": r"Gemini_Generated_Image_9n8oei9n8oei9n8o.jpg"
+    },
+    {
+        "category": "☕ Korean Cityboy & Minimal",
+        "name": "Earth Tone Cardigan Layer",
+        "desc": "เสื้อคาร์ดิแกนไหมพรมกระดุมหน้าสีน้ำตาลเอิร์ธโทน สวมทับเสื้อกล้ามคอเหลี่ยมสีขาว + กางเกงคาร์โก้เอวสูงสีดำทรงหลวม + รองเท้าสนีกเกอร์ทรงสปอร์ต + แว่นตาเลนส์ใสกรอบบาง",
+        "img": r"Gemini_Generated_Image_gxoz4wgxoz4wgxoz.jpg"
+    },
+    {
+        "category": "☕ Korean Cityboy & Minimal",
+        "name": "Baby Tee Chill Day",
+        "desc": "เสื้อยืด Baby Tee + กางเกงยีนส์ขาสั้นสีขาว + รองเท้าแตะชิลๆน่ารักๆ + กระเป๋าสะพายไหล่ใบเล็ก",
+        "img": r"Gemini_Generated_Image_eupb1qeupb1qeupb.jpg"
     }
 ]
 
@@ -121,7 +132,7 @@ else:
     
     # ฟอร์มเพิ่มลุคใหม่
     st.sidebar.subheader("➕ เพิ่มลุคใหม่เข้าคลัง")
-    categories = list(set([o["category"] for o in st.session_state.outfits]))
+    categories = sorted(list(set([o["category"] for o in st.session_state.outfits])))
     new_cat = st.sidebar.selectbox("เลือกหมวดหมู่", categories)
     new_name = st.sidebar.text_input("ชื่อสไตล์/ลุค")
     new_desc = st.sidebar.text_area("รายละเอียดชุด")
@@ -136,6 +147,7 @@ else:
                 "img": new_img
             })
             st.sidebar.success("เพิ่มชุดใหม่เข้าคลังสำเร็จ!")
+            st.rerun()
         else:
             st.sidebar.warning("กรุณากรอกข้อมูลให้ครบทุกช่อง")
 
