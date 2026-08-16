@@ -1,17 +1,17 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import random
 import os
 
 # --- CONFIG & INITIAL SETUP ---
 st.set_page_config(page_title="Modern Outfit Picker", page_icon="🛍️", layout="centered")
 
-# --- 1. CSS ธีมสีชมพูสดใส & ตกแต่งปุ่ม/การ์ด ---
+# --- 1. CSS ธีมสีชมพู & เอฟเฟกต์ไอคอนร่วงหล่นภายในหน้าเว็บ ---
 st.markdown("""
 <style>
     /* พื้นหลังแอปสีชมพูสดใส */
     .stApp {
         background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 50%, #FFA7A7 100%) !important;
+        overflow-x: hidden;
     }
     
     /* ตกแต่งหัวข้อหลัก */
@@ -51,13 +51,22 @@ st.markdown("""
         box-shadow: 0 8px 25px rgba(255, 0, 127, 0.6) !important;
     }
 
-    /* CSS สำหรับไอคอนเสื้อผ้าร่วงหล่น */
-    .falling-icon {
+    /* สร้างกล่องจำลองฝนเสื้อผ้าร่วงหล่นแบบเสถียรบน Cloud */
+    .rain-container {
         position: fixed;
-        top: -10%;
-        z-index: 999999;
-        user-select: none;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
         pointer-events: none;
+        overflow: hidden;
+        z-index: 999;
+    }
+
+    .falling-item {
+        position: absolute;
+        top: -10%;
+        user-select: none;
         animation-name: fallAnimation;
         animation-timing-function: linear;
         animation-iteration-count: infinite;
@@ -65,52 +74,30 @@ st.markdown("""
 
     @keyframes fallAnimation {
         0% {
-            top: -10%;
-            transform: translateX(0) rotate(0deg);
+            transform: translateY(-10vh) rotate(0deg);
             opacity: 1;
         }
         100% {
-            top: 105vh;
-            transform: translateX(100px) rotate(360deg);
-            opacity: 0.2;
+            transform: translateY(110vh) rotate(360deg);
+            opacity: 0.3;
         }
     }
 </style>
+
+<!-- สร้างสลัดไอคอนร่วงหล่นด้วย CSS Pure Animation เพื่อให้รันบน Cloud ได้ชัวร์ -->
+<div class="rain-container">
+    <div class="falling-item" style="left: 5%; font-size: 24px; animation-duration: 5s; animation-delay: 0s;">👕</div>
+    <div class="falling-item" style="left: 15%; font-size: 28px; animation-duration: 7s; animation-delay: 2s;">👗</div>
+    <div class="falling-item" style="left: 25%; font-size: 22px; animation-duration: 6s; animation-delay: 1s;">👟</div>
+    <div class="falling-item" style="left: 35%; font-size: 26px; animation-duration: 8s; animation-delay: 3s;">🧢</div>
+    <div class="falling-item" style="left: 45%; font-size: 25px; animation-duration: 5.5s; animation-delay: 0.5s;">🕶️</div>
+    <div class="falling-item" style="left: 55%; font-size: 27px; animation-duration: 6.5s; animation-delay: 2.5s;">👜</div>
+    <div class="falling-item" style="left: 65%; font-size: 23px; animation-duration: 7.5s; animation-delay: 1.5s;">🧥</div>
+    <div class="falling-item" style="left: 75%; font-size: 26px; animation-duration: 6s; animation-delay: 3.5s;">👖</div>
+    <div class="falling-item" style="left: 85%; font-size: 24px; animation-duration: 5s; animation-delay: 1s;">🎀</div>
+    <div class="falling-item" style="left: 92%; font-size: 29px; animation-duration: 8s; animation-delay: 0.2s;">✨</div>
+</div>
 """, unsafe_allow_html=True)
-
-# --- 2. JAVASCRIPT ยิงไอคอนร่วงหล่นเข้าหน้าหลักโดยตรง ---
-components.html("""
-<script>
-    const parentDoc = window.top.document;
-    const icons = ['👕', '👗', '👟', '🧢', '🕶️', '👜', '🧥', '👖', '🎀', '👚', '👠', '🛍️', '✨'];
-
-    function createFallingIcon() {
-        if (!parentDoc.body) return;
-
-        const iconElement = parentDoc.createElement('div');
-        iconElement.className = 'falling-icon';
-        iconElement.innerText = icons[Math.floor(Math.random() * icons.length)];
-        
-        // สุ่มตำแหน่ง ขนาด และความเร็วในการตก
-        iconElement.style.left = Math.random() * 95 + 'vw';
-        iconElement.style.fontSize = (Math.random() * 20 + 20) + 'px';
-        iconElement.style.animationDuration = (Math.random() * 3 + 4) + 's';
-        iconElement.style.opacity = Math.random() * 0.8 + 0.3;
-
-        parentDoc.body.appendChild(iconElement);
-
-        // ลบ Element ทิ้งเมื่อร่วงจบจอ
-        setTimeout(() => {
-            iconElement.remove();
-        }, 7000);
-    }
-
-    // สร้างไอคอนใหม่ทุกๆ 350 มิลลิวินาที
-    if (!window.top.iconInterval) {
-        window.top.iconInterval = setInterval(createFallingIcon, 350);
-    }
-</script>
-""", height=0)
 
 USER_DB = {"user1": "1234", "admin": "password"}
 
