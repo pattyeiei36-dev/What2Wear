@@ -1,252 +1,176 @@
-import random
-import sqlite3
-import io
 import streamlit as st
-from PIL import Image
+import random
+import os
 
-# ตั้งค่าหน้าเว็บ
-st.set_page_config(page_title="Outfit Randomizer", page_icon="👗", layout="centered")
+# --- CONFIG & INITIAL SETUP ---
+st.set_page_config(page_title="Modern Outfit Picker", page_icon="🛍️", layout="centered")
 
-# ==================== 1. ระบบจัดการฐานข้อมูล (DATABASE) ====================
-DB_NAME = "outfit_app.db"
+USER_DB = {"user1": "1234", "admin": "password"}
 
-def init_db():
-    """สร้างตารางในฐานข้อมูลหากยังไม่มี"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    # ตารางผู้ใช้งาน
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            password TEXT NOT NULL
-        )
-    ''')
-    # ตารางชุดแต่งตัว
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS outfits (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            category TEXT NOT NULL,
-            text TEXT NOT NULL,
-            image_blob BLOB,
-            FOREIGN KEY (username) REFERENCES users (username)
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# คลังชุดแต่งกายสไตล์วัยรุ่นยุคใหม่ (อัปเดตใช้ Local Image Path)
+MODERN_OUTFITS = [
+    # --- 🧢 Gorpcore & Techwear ---
+    {
+        "category": "🧢 Gorpcore & Techwear",
+        "name": "Gorpcore Utility Trail",
+        "desc": "เสื้อแจ็กเก็ตกันลม Arc'teryx + กางเกงคาร์โก้ผ้า Ripstop + รองเท้า Salomon XT-6 + แว่น Oakley",
+        # ใช้ r"..." เพื่อรองรับ Path บน Windows (ใส่ตัว r ด้านหน้า)
+        "img": r"Gemini_Generated_Image_yk5vbwyk5vbwyk5v.jpg"
+    },
+    {
+        "category": "🧢 Gorpcore & Techwear",
+        "name": "Tactical Outdoor Layer",
+        "desc": "เสื้อกั๊ก Utility มีกระเป๋าเยอะ + เสื้อยืดสีพื้นทรง Oversized + หมวก Bucket ผ้ากันน้ำ",
+        "img": r"Gemini_Generated_Image_9oxyag9oxyag9oxy.jpg"
+    },
+    {
+        "category": "🧢 Gorpcore & Techwear",
+        "name": "Mountain Minimalist",
+        "desc": "เสื้อขนแกะ (Fleece Jacket) สีทูโทน + กางเกงขาสั้นลุยป่า + ถุงเท้าข้อยาว + รองเท้า Trail Running",
+        "img": r"Gemini_Generated_Image_tn0lhwtn0lhwtn0l.jpg"
+    },
+    {
+        "category": "🧢 Gorpcore & Techwear",
+        "name": "Urban Anorak Fit",
+        "desc": "เสื้อ Anorak สวมหัวสีเอิร์ธโทน + กางเกงชิโน่ขากว้าง + กระเป๋าคาดอก Paracord",
+        "img": r"Gemini_Generated_Image_fkrceafkrceafkrc.jpg"
+    },
+    {
+        "category": "🧢 Gorpcore & Techwear",
+        "name": "Modern Hiker Vibe",
+        "desc": "เสื้อกั๊กผ้านวม (Puffer Vest) + เสื้อฮู้ดดี้คอตตอนหนา + กางเกงยีนส์ฟอก + บูทลุยหิมะ/ป่า",
+        "img": r"Gemini_Generated_Image_q81jtiq81jtiq81j.jpg"
+    },
 
-def seed_default_data():
-    """ใส่ข้อมูลชุดเริ่มต้น 4-5 ชุดในแต่ละหัวข้อ (สำหรับยูสเซอร์ทดลองเล่น admin)"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    
-    # ตรวจสอบว่ามีผู้ใช้ admin หรือยัง
-    c.execute("SELECT * FROM users WHERE username = 'admin'")
-    if not c.fetchone():
-        # สร้างผู้ใช้ทดสอบ admin / 1234
-        c.execute("INSERT INTO users (username, password) VALUES ('admin', '1234')")
-        
-        # รายการชุดเริ่มต้น 4-5 ชุดต่อหมวดหมู่
-        default_outfits = [
-            # --- หมวดหมู่ 1: ไปเรียน / ทำงาน (5 ชุด) ---
-            ("admin", "📚 ไปเรียน / ทำงาน", "เสื้อเชิ้ตสีขาวเรียบ + กางเกงสแล็คสีดำ + รองเท้าคัทชู/หุ้มส้น", None),
-            ("admin", "📚 ไปเรียน / ทำงาน", "เสื้อโปโลสีน้ำเงิน + กางเกงชิโน่สีครีม + รองเท้าสนีกเกอร์สีขาว", None),
-            ("admin", "📚 ไปเรียน / ทำงาน", "เสื้อเบลเซอร์สีกรมทับเสื้อยืด + กางเกงยีนส์ทรงสเตรท + รองเท้าโลฟเฟอร์", None),
-            ("admin", "📚 ไปเรียน / ทำงาน", "ชุดยูนิฟอร์ม / เสื้อเชิ้ตพับแขน + กางเกงทรงกระบอก + นาฬิกาข้อมือ", None),
-            ("admin", "📚 ไปเรียน / ทำงาน", "เสื้อไหมพรมแขนยาวโทนสีมินิมอล + กางเกงผ้าสแล็คสีเทา", None),
+    # --- ✨ Clean Girl & Old Money ---
+    {
+        "category": "✨ Clean Girl & Old Money",
+        "name": "Quiet Luxury Linen",
+        "desc": "เดรสยาวผ้าฝ้ายเรียบสีขาวทรงคอกลม/คอเหลี่ยม + เสื้อคาร์ดิแกนไหมพรมสีเบจผูกเอวหรือพาดไหล่ + รองเท้าคัทชูพื้นแบน (Ballerina Flats) สีดำ + ต่างหูมุกขนาดเล็ก",
+        "img": r"Gemini_Generated_Image_blda67blda67blda.jpg"
+    },
+    {
+        "category": "✨ Clean Girl & Old Money",
+        "name": "Tennis Club Aesthetic",
+        "desc": "เสื้อไหมพรมคอวีถักลายเคเบิล + กระโปรงเทนนิสอัดจีบ + ถุงเท้าข้อยาวสีขาว + รองเท้าผ้าใบคลีนๆ",
+        "img": r"Gemini_Generated_Image_lrueellrueellrue.jpg"
+    },
 
-            # --- หมวดหมู่ 2: ไปเที่ยวชิลๆ / Streetwear (5 ชุด) ---
-            ("admin", "ไปเที่ยวชิลๆ", "เสื้อยืด Oversize สีดำ + กางเกงยีนส์ขากว้าง (Baggy) + หมวกแก๊ป", None),
-            ("admin", "ไปเที่ยวชิลๆ", "เสื้อสเวตเตอร์ / เสื้อฮู้ด + กางเกงวอร์มขารวบ + รองเท้าผ้าใบสตรีท", None),
-            ("admin", "ไปเที่ยวชิลๆ", "เสื้อกล้าม/เสื้อยืดขาว + สวมแจ็คเก็ตยีนส์ทับ + กางเกงคาร์โก้", None),
-            ("admin", "ไปเที่ยวชิลๆ", "เสื้อฮาวายลายสวยๆ + กางเกงขาสั้นระดับเข่า + แว่นกันแดด", None),
-            ("admin", "ไปเที่ยวชิลๆ", "เสื้อแขนยาวลายทาง + กางเกงยีนส์ขาสั้น + กระเป๋าคาดอก", None),
+    # --- ⚽ Blokecore & Sporty ---
+    {
+        "category": "⚽ Blokecore & Sporty",
+        "name": "Vintage Football Blokecore",
+        "desc": "เสื้อบอลวินเทจยุค 90s + กางเกงยีนส์บากี้หลวมๆ + รองเท้า Adidas Samba / Gazelle",
+        "img": r"Gemini_Generated_Image_4i1y554i1y554i1y.jpg"
+    },
 
-            # --- หมวดหมู่ 3: ไปงานแต่ง / งานทางการ (4 ชุด) ---
-            ("admin", "✨ ไปงานแต่ง / งานทางการ", "ชุดสูทสีกรมท่า/เทาเข้ม + เชิ้ตขาว + เนกไท + รองเท้าหนัง", None),
-            ("admin", "✨ ไปงานแต่ง / งานทางการ", "ชุดเดรสยาว / เดรสสั้นสีพาสเทล + กระเป๋าคลัตช์ + ส้นสูง", None),
-            ("admin", "✨ ไปงานแต่ง / งานทางการ", "เสื้อเชิ้ตคอจีนแขนยาว + กางเกงสแล็คสีสว่าง + เข็มขัดหนัง", None),
-            ("admin", "✨ ไปงานแต่ง / งานทางการ", "เบลเซอร์กระดุมคู่ + กางเกงเข้าชุด + รองเท้าหนังบราวน์/ดำ", None),
-        ]
-        
-        c.executemany(
-            "INSERT INTO outfits (username, category, text, image_blob) VALUES (?, ?, ?, ?)",
-            default_outfits
-        )
-        conn.commit()
-    
-    conn.close()
+    # --- 🖤 Acubi & Modern Y2K ---
+    {
+        "category": "🖤 Acubi & Modern Y2K",
+        "name": "Acubi Minimal Layering",
+        "desc": "เสื้อซีทรูแขนยาวทับสายเดี่ยวแบบเฉียง + กางเกงคาร์โก้เอวต่ำสีเทา/ดำ + สร้อยคอเงินแท่งมินิมอล",
+        "img": "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=600"
+    },
 
-def register_user(username, password):
-    """ลงทะเบียนผู้ใช้ใหม่"""
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.IntegrityError:
-        return False
+    # --- ☕ Korean Cityboy & Minimal ---
+    {
+        "category": "☕ Korean Cityboy & Minimal",
+        "name": "Cityboy Wide Silhouette",
+        "desc": "เสื้อเชิ้ต Oxford ทรงหลวมพิเศษ + กางเกงยีนส์ทรงขากระบอกใหญ่ + รองเท้า Clark Wallabee",
+        "img": "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600"
+    }
+]
 
-def authenticate_user(username, password):
-    """ตรวจสอบการเข้าสู่ระบบ"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password))
-    user = c.fetchone()
-    conn.close()
-    return user is not None
+# โหลดชุดลงใน Session State
+if "outfits" not in st.session_state:
+    st.session_state.outfits = MODERN_OUTFITS
 
-def get_user_outfits(username):
-    """ดึงรายการชุดของผู้ใช้ที่เข้าสู่ระบบ"""
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute("SELECT category, text, image_blob FROM outfits WHERE username = ?", (username,))
-    rows = c.fetchall()
-    conn.close()
-    
-    outfits = {}
-    for cat, text, img_blob in rows:
-        img = None
-        if img_blob:
-            img = Image.open(io.BytesIO(img_blob))
-        if cat not in outfits:
-            outfits[cat] = []
-        outfits[cat].append({"text": text, "image": img})
-        
-    return outfits
-
-def add_user_outfit(username, category, text, image_file):
-    """บันทึกชุดใหม่ลงฐานข้อมูล"""
-    img_blob = None
-    if image_file is not None:
-        img_blob = image_file.read()
-        
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO outfits (username, category, text, image_blob) VALUES (?, ?, ?, ?)",
-        (username, category, text, img_blob)
-    )
-    conn.commit()
-    conn.close()
-
-# เรียกใช้งานการตั้งค่าฐานข้อมูลและสร้างข้อมูลเริ่มต้น
-init_db()
-seed_default_data()
-
-# ==================== 2. SESSION STATE & LOGIN CONTROLLER ====================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = ""
 
-# ---------------- หน้าจอ LOGIN / REGISTER ----------------
+# --- LOGIN & LOGOUT SYSTEM ---
+def login():
+    st.sidebar.title("🔐 เข้าสู่ระบบ")
+    user_input = st.sidebar.text_input("Username")
+    pass_input = st.sidebar.text_input("Password", type="password")
+    
+    if st.sidebar.button("Login"):
+        if user_input in USER_DB and USER_DB[user_input] == pass_input:
+            st.session_state.logged_in = True
+            st.session_state.username = user_input
+            st.rerun()
+        else:
+            st.sidebar.error("Username หรือ Password ไม่ถูกต้อง")
+
+def logout():
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.rerun()
+
+# --- SIDEBAR CONTROLS ---
 if not st.session_state.logged_in:
-    st.title("👗 Daily Outfit Randomizer")
-    st.subheader("กรุณาเข้าสู่ระบบ หรือ สมัครสมาชิกเพื่อเริ่มต้นใช้งาน")
-    st.info("💡 **ทดลองใช้งานกดเข้าสู่ระบบได้ทันทีด้วย:** Username: `admin` | Password: `1234`")
-    
-    tab1, tab2 = st.tabs(["🔑 เข้าสู่ระบบ", "📝 สมัครสมาชิก"])
-    
-    with tab1:
-        login_user = st.text_input("ชื่อผู้ใช้งาน (Username)", key="login_user")
-        login_pass = st.text_input("รหัสผ่าน (Password)", type="password", key="login_pass")
-        if st.button("เข้าสู่ระบบ", type="primary", use_container_width=True):
-            if authenticate_user(login_user, login_pass):
-                st.session_state.logged_in = True
-                st.session_state.username = login_user
-                st.success("เข้าสู่ระบบสำเร็จ!")
-                st.rerun()
-            else:
-                st.error("ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง")
-                
-    with tab2:
-        reg_user = st.text_input("ตั้งชื่อผู้ใช้งาน (Username)", key="reg_user")
-        reg_pass = st.text_input("ตั้งรหัสผ่าน (Password)", type="password", key="reg_pass")
-        if st.button("สมัครสมาชิก", use_container_width=True):
-            if reg_user.strip() and reg_pass.strip():
-                if register_user(reg_user.strip(), reg_pass.strip()):
-                    st.success("สมัครสมาชิกสำเร็จ! กรุณาสลับไปหน้าเข้าสู่ระบบ")
-                else:
-                    st.warning("ชื่อผู้ใช้นี้มีในระบบแล้ว กรุณาใช้ชื่ออื่น")
-            else:
-                st.warning("กรุณากรอกข้อมูลให้ครบถ้วน")
-
-# ---------------- หน้าจอหลักของแอปพลิเคชัน (หลัง LOGIN) ----------------
+    login()
 else:
-    user_outfits = get_user_outfits(st.session_state.username)
+    st.sidebar.write(f"👤 ยินดีต้อนรับ, **{st.session_state.username}**")
+    if st.sidebar.button("Logout"):
+        logout()
     
-    # Header & ปุ่ม Logout
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.title("👗 Daily Outfit Randomizer")
-        st.write(f"ยินดีต้อนรับคุณ **{st.session_state.username}** 👋")
-    with col2:
-        st.write("")
-        if st.button("🚪 ออกจากระบบ"):
-            st.session_state.logged_in = False
-            st.session_state.username = ""
-            st.rerun()
-
-    # ==================== SIDEBAR: เพิ่มลุคใหม่ ====================
-    st.sidebar.header("➕ เพิ่มลุคใหม่")
+    st.sidebar.divider()
     
-    # หมวดหมู่เริ่มต้นหากยังไม่มี
-    default_categories = ["📚 ไปเรียน / ทำงาน", "ค ไปเที่ยวชิลๆ", "✨ ไปงานแต่ง / งานทางการ"]
-    existing_categories = list(user_outfits.keys())
-    all_categories = list(set(default_categories + existing_categories))
+    # ฟอร์มเพิ่มลุคใหม่
+    st.sidebar.subheader("➕ เพิ่มลุคใหม่เข้าคลัง")
+    categories = list(set([o["category"] for o in st.session_state.outfits]))
+    new_cat = st.sidebar.selectbox("เลือกหมวดหมู่", categories)
+    new_name = st.sidebar.text_input("ชื่อสไตล์/ลุค")
+    new_desc = st.sidebar.text_area("รายละเอียดชุด")
+    new_img = st.sidebar.text_input("Path รูปภาพในเครื่อง หรือ URL")
     
-    selected_cat_to_add = st.sidebar.selectbox("เลือกหมวดหมู่:", all_categories)
-    new_cat_custom = st.sidebar.text_input("หรือ พิมพ์ชื่อหมวดหมู่ใหม่ที่ต้องการ:")
-    
-    final_cat = new_cat_custom.strip() if new_cat_custom.strip() else selected_cat_to_add
-    new_outfit_text = st.sidebar.text_input("รายละเอียดชุด (เช่น เสื้อ... + กางเกง...):")
-    uploaded_file = st.sidebar.file_uploader("🖼️ แนบรูปภาพชุด (JPG, PNG):", type=["jpg", "jpeg", "png"])
-
-    if uploaded_file is not None:
-        preview_img = Image.open(uploaded_file)
-        st.sidebar.image(preview_img, caption="ตัวอย่างรูปที่เลือก", use_container_width=True)
-
-    if st.sidebar.button("💾 บันทึกชุดใหม่", use_container_width=True):
-        if new_outfit_text.strip():
-            add_user_outfit(
-                st.session_state.username, 
-                final_cat, 
-                new_outfit_text.strip(), 
-                uploaded_file
-            )
-            st.sidebar.success(f"บันทึก '{new_outfit_text}' เรียบร้อยแล้ว!")
-            st.rerun()
+    if st.sidebar.button("บันทึกชุดใหม่"):
+        if new_name and new_desc and new_img:
+            st.session_state.outfits.append({
+                "category": new_cat,
+                "name": new_name,
+                "desc": new_desc,
+                "img": new_img
+            })
+            st.sidebar.success("เพิ่มชุดใหม่เข้าคลังสำเร็จ!")
         else:
-            st.sidebar.warning("กรุณากรอกรายละเอียดชุดก่อนกดบันทึก")
+            st.sidebar.warning("กรุณากรอกข้อมูลให้ครบทุกช่อง")
 
-    # ==================== MAIN PAGE: สุ่มชุดและแสดงผล ====================
-    st.divider()
+# --- MAIN APP DISPLAY ---
+st.title("🛍️ Trend & Aesthetic Outfit Picker")
+st.write("สุ่มไอเดียจัดเซ็ตเสื้อผ้าสำหรับเทรนด์วัยรุ่นยุคใหม่")
+
+categories_list = ["สุ่มจากทุกหมวดหมู่ (All Categories)"] + sorted(list(set([o["category"] for o in st.session_state.outfits])))
+selected_cat = st.selectbox("🎯 เลือกสไตล์ที่ชอบ:", categories_list)
+
+if st.button("✨ สุ่มลุคแต่งตัว!", type="primary"):
+    if selected_cat == "สุ่มจากทุกหมวดหมู่ (All Categories)":
+        available_outfits = st.session_state.outfits
+    else:
+        available_outfits = [o for o in st.session_state.outfits if o["category"] == selected_cat]
     
-    selectable_categories = all_categories if user_outfits == {} else list(user_outfits.keys())
-    selected_category = st.selectbox("🎯 เลือกโอกาส/หมวดหมู่ที่ต้องการ:", selectable_categories)
+    if available_outfits:
+        st.session_state.current_outfit = random.choice(available_outfits)
 
-    if st.button("🎲 สุ่มชุดแต่งตัว!", type="primary", use_container_width=True):
-        available_outfits = user_outfits.get(selected_category, [])
-        
-        if available_outfits:
-            chosen_outfit = random.choice(available_outfits)
-            st.success(f"### ✨ ชุดที่คุณได้วันนี้:\n**{chosen_outfit['text']}**")
-            
-            if chosen_outfit["image"] is not None:
-                st.image(chosen_outfit["image"], caption=chosen_outfit["text"], use_container_width=True)
-            else:
-                st.info("💡 ชุดนี้ยังไม่มีรูปภาพประกอบ คุณสามารถอัปโหลดรูปเพิ่มเติมได้ที่ Sidebar ซ้ายมือครับ")
+# แสดงผลชุดที่สุ่มได้
+if "current_outfit" in st.session_state:
+    outfit = st.session_state.current_outfit
+    
+    st.markdown("---")
+    st.caption(f"หมวดหมู่: {outfit['category']}")
+    st.subheader(f"⚡ ลุคแนะนำ: **{outfit['name']}**")
+    st.write(f"🧺 **ชิ้นส่วนในเซ็ต:** {outfit['desc']}")
+    
+    # เช็กว่ารูปภาพมาจาก URL หรือ Local File Path ในเครื่อง
+    img_path = outfit['img']
+    if img_path.startswith("http://") or img_path.startswith("https://"):
+        st.image(img_path, caption=f"Outfit Visual: {outfit['name']}", use_container_width=True)
+    else:
+        # ตรวจสอบว่ามีไฟล์อยู่จริงในเครื่องก่อนแสดงผล
+        if os.path.exists(img_path):
+            st.image(img_path, caption=f"Outfit Visual: {outfit['name']}", use_container_width=True)
         else:
-            st.warning("หมวดหมู่นี้ยังไม่มีรายการชุดของคุณ ลองเพิ่มชุดใหม่ทาง Sidebar ซ้ายมือได้เลยครับ!")
-
-    # แสดงรายการชุดทั้งหมดที่มีของผู้ใช้งานคนนี้
-    if user_outfits:
-        with st.expander("👀 ดูรายการชุดทั้งหมดของคุณตามหมวดหมู่"):
-            for cat, items in user_outfits.items():
-                st.write(f"### {cat} ({len(items)} ชุด)")
-                for idx, item in enumerate(items, 1):
-                    has_img_tag = " 🖼️ (มีรูปภาพ)" if item["image"] is not None else ""
-                    st.write(f"{idx}. {item['text']}{has_img_tag}")
+            st.error(f"ไม่พบไฟล์รูปภาพในเครื่องตามตำแหน่ง: {img_path}")
